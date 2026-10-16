@@ -16,5 +16,6 @@ endforeach()
 # 3. Создаем кнопки запуска только для чистых файлов
 foreach(SOURCE_FILE ${ALL_C_FILES})
     get_filename_component(TARGET_NAME ${SOURCE_FILE} NAME_WE)
-    add_executable(${TARGET_NAME} ${SOURCE_FILE})
+    add_executable(${TARGET_NAME} ${SOURCE_FILE}
+            Project/151077_project_v1.c)
 endforeach()
