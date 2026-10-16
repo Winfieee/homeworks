@@ -2,17 +2,23 @@
 #include <stdlib.h>
 
 int main() {
-    char x;
-    FILE *fileread = fopen("novy.txt", "w");
-    FILE *filewrite = fopen("znak.txt", "rb");
-    if (fileread == NULL || filewrite == NULL) return 1;
+    char x, buffer[256];
+    FILE *fw = fopen("novy.txt", "w"), *fr = fopen("znak.txt", "r");
+    if (fr == NULL || fw == NULL) return 1;
 
-
-
-    printf("Nacitajte 's' kak chcete skopirovat obsah suboru znak.txt\n");
+    printf("Nacitajte 's', ak chcete skopirovat obsah suboru znak.txt, iny symbol ak v console\n");
     scanf("%c", &x);
-    for (int i = 1; i <= 10; i++) {
-        fprintf(fileread, "%d * %.2f = %.2f\n", i, x, x * i);
+    if (x == 's') {
+        for (int i = 1; fgets(buffer, sizeof(buffer), fr) != NULL; i++) {
+            fputs(buffer, fw);
+        }
     }
+    else {
+        for (int i = 1; fgets(buffer, sizeof(buffer), fr) != NULL; i++) {
+            printf("%s", buffer);
+        }
+    }
+    fclose(fw);
+    fclose(fr);
     return 0;
 }
