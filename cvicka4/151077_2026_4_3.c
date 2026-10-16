@@ -28,10 +28,13 @@ long rezervne_cislo(long x) {
 }
 int main() {
     long a;
+    printf("Nacitujte cisla pri kazdy novy vstup: \n");
     while (1) {
         scanf("%ld", &a);
         if (a < 0) a = labs(a);
         printf("%ld\n", rezervne_cislo(a));
+        if (a == rezervne_cislo(a)) printf("Cislo %d je palindromom\n", a);
+        else printf("Cislo %d nie je palindrom\n", a);
     }
     return 0;
 }
