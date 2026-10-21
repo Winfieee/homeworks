@@ -7,7 +7,9 @@ int main() {
     long long differences = 0;
     int character1, character2;
     while (character1 != EOF || character2 != EOF) {
-        if (character1 == character2) {}
+        if (character1 == character2) {
+
+        }
     }
 
 }
