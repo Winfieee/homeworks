@@ -3,12 +3,12 @@
 
 void v(FILE **zoznam, FILE **checkin) {
     rewind(*zoznam);
-    char buffer[27]; //tu zacina premenne pre V 1
+    char buffer[27];
     char meno[16]; //15 + 1 preto ze jeden byte pouzijem pre /0
     char priezvesk[26];
     int riadok = 0;
     int vek;
-    int which_v; //a tu skonci premenne pre V 1
+    int which_v;
     scanf("%d", &which_v);
     if (which_v == 1) { //po aktivovaní program zistí, či txt súbory už boli otvorené (všetky 2 txt súbory)
         if (*zoznam == NULL) {
@@ -160,6 +160,9 @@ int main() {
         }
         else if (program == 'q') {
             break;
+        }
+        else {
+            printf("Neexistujúci program. Oberte : h, v, q\n");
         }
     }
     if (zoznam != NULL) {
