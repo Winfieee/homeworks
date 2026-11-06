@@ -2,7 +2,6 @@
 #include<stdlib.h>
 
 void v(FILE **zoznam, FILE **checkin) {
-    rewind(*zoznam);
     char buffer[27];
     char meno[16]; //15 + 1 preto ze jeden byte pouzijem pre /0
     char priezvesk[26];
@@ -22,6 +21,7 @@ void v(FILE **zoznam, FILE **checkin) {
             return;                                       //program vypíše správu„V1: Neotvorene txt subory.“
         }
         else{
+            rewind(*zoznam);
             while (fgets(buffer, sizeof(buffer), *zoznam) != NULL) {
                 if (riadok % 7 == 1) { /*prva iteracia riadok = 0, scitam symbol "#". Formula pre premennu
                                     na iteracii cyklusu while napr. pre meno je 2+7n, pre priezvesko 3+7n...*/
