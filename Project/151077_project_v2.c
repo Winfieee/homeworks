@@ -8,59 +8,73 @@
    zoznamCK.txt: let[i], meno[i], priezvisko[i], datum[i], sedadlo[i], batozina[i]
    checkin1.txt: c_let[i], c_sedadlo[i], c_batozina[i], c_vahy[i][0..c_batozina[i]-1] */
 
-void v1(FILE **zoznam, FILE **checkin) {
-    char buffer[100]; //v1 malo 27, ked bol riadok dlhsi fgets ho rozdelil na 2 casti a riadky sa posunuli
-    char let[10];
+/* V2: v2() je napisana az za h (poradie: v1, h, v 2, n, q, w, e), ale v() ju vola uz tu,
+   preto ju tu iba ohlasim (prototyp) - kompilator potom vie, ze taka funkcia existuje */
+void v2(char **let, char **meno, char **priezvisko, char **datum, char **sedadlo, int *batozina, int z_pocet,
+        char **c_let, char **c_sedadlo, int *c_batozina, float **c_vahy, int c_pocet, int polia);
+
+void v(FILE **zoznam, FILE **checkin,
+       char **let, char **meno_p, char **priezvisko, char **datum, char **sedadlo, int *batozina, int z_pocet,
+       char **c_let, char **c_sedadlo, int *c_batozina, float **c_vahy, int c_pocet, int polia) {
+    //V2: pridane parametre s dynamickymi poliami - v() ich iba posunie do v2()
+    char buffer[27];
     char meno[16]; //15 + 1 preto ze jeden byte pouzijem pre /0
     char priezvesk[26];
-    char sedadlo[5];
     int riadok = 0;
     int vek;
-    //po aktivovaní program zistí, či txt súbory už boli otvorené (všetky 2 txt súbory)
-    if (*zoznam == NULL) {
-        *zoznam = fopen("zoznamCK.txt", "r"); //Ak súbory ešte neboli otvorené...
+    int which_v;
+    scanf("%d", &which_v);
+    if (which_v == 1) { //po aktivovaní program zistí, či txt súbory už boli otvorené (všetky 2 txt súbory)
+        if (*zoznam == NULL) {
+            *zoznam = fopen("zoznamCK.txt", "r"); //Ak súbory ešte neboli otvorené...
+        }
+        if (*checkin == NULL) {
+            *checkin = fopen("checkin1.txt", "r"); //...program sa ich pokúsi otvoriť.
+        }
+        if (*zoznam == NULL || *checkin == NULL) {
+            printf("V1: Neotvorene txt subory.\n"); //prípade, ak sa aspoň jeden txt súbor nepodarí otoriť
+            return;                                       //program vypíše správu„V1: Neotvorene txt subory.“
+        }
+        else{
+            rewind(*zoznam);
+            while (fgets(buffer, sizeof(buffer), *zoznam) != NULL) {
+                if (riadok % 7 == 1) { /*prva iteracia riadok = 0, scitam symbol "#". Formula pre premennu
+                                    na iteracii cyklusu while napr. pre meno je 2+7n, pre priezvesko 3+7n...*/
+                    printf("Označenie letu: %s", buffer);
+                }
+                if (riadok % 7 == 2) {
+                    sscanf(buffer, "%s", meno);
+                }
+                if (riadok % 7 == 3) {
+                    sscanf(buffer, "%s", priezvesk);
+                }
+                if (riadok % 7 == 4) {
+                    vek = 2026 - ((buffer[4]-'0') * 1000 + (buffer[5]-'0') * 100 + (buffer[6]-'0') * 10
+                        + (buffer[7]-'0'));
+                    printf("Meno a Priezvisko [vek]: %s %s [%d]\n", meno, priezvesk, vek);
+                }
+                if (riadok % 7 == 5) {
+                    printf("Označenie sedadla: %s\n", buffer);
+                }
+                riadok++;
+                if (buffer[0] == '\n' || buffer[0] == '\0' || buffer[0] == '\r') {
+                    /*Txt súbory budú obsahovať iba hodnoty, nie typy (názvy) položiek. Jednotlivé
+                    záznamy budú v txt súbore oddelené prázdnym riadkom, tj. aj po poslednom
+                    zázname sa bude nachádzať prázdny riadok - enter (vid. ukážka txt súboru vyššie). */
+                    riadok = 0;
+                }
+            }
+        }
     }
-    if (*checkin == NULL) {
-        *checkin = fopen("checkin1.txt", "r"); //...program sa ich pokúsi otvoriť.
+    else if (which_v == 2) { //V2: pridane - vypis z dynamickych poli
+        v2(let, meno_p, priezvisko, datum, sedadlo, batozina, z_pocet,
+           c_let, c_sedadlo, c_batozina, c_vahy, c_pocet, polia);
     }
-    if (*zoznam == NULL || *checkin == NULL) {
-        printf("V1: Neotvorene txt subory.\n"); //prípade, ak sa aspoň jeden txt súbor nepodarí otoriť
-        return;                                       //program vypíše správu„V1: Neotvorene txt subory.“
-    }
-    rewind(*zoznam);
-    while (fgets(buffer, sizeof(buffer), *zoznam) != NULL) {
-        if (buffer[0] == '\n' || buffer[0] == '\r' || buffer[0] == '\0') {
-            continue; //"(môže byť aj prázdny riadok)" - prazdny riadok preskocim
-        }
-        if (buffer[0] == '#') { /*novy format: kazdy zaznam zacina '#', takze tu zacinam pocitat od 0
-                                 (v1 resetovalo az na prazdnom riadku, ten tam ale byt nemusi)*/
-            riadok = 0;
-            continue;
-        }
-        riadok++; //1 = let, 2 = meno, 3 = priezvisko, 4 = datum, 5 = sedadlo, 6 = batozina
-        if (riadok == 1) {
-            sscanf(buffer, "%9s", let); //sscanf %s zoberie iba slovo, '\n' na konci tam nebude
-            printf("Označenie letu: %s\n", let);
-        }
-        if (riadok == 2) {
-            sscanf(buffer, "%15s", meno); //%15s aby som neprepisal pamat za polom meno
-        }
-        if (riadok == 3) {
-            sscanf(buffer, "%25s", priezvesk);
-        }
-        if (riadok == 4) {
-            char datum[10];
-            sscanf(buffer, "%9s", datum);
-            int d = strlen(datum); //rok su posledne 4 cislice datumu DDMMRRRR
-            vek = 2026 - ((datum[d-4]-'0') * 1000 + (datum[d-3]-'0') * 100 + (datum[d-2]-'0') * 10
-                + (datum[d-1]-'0'));
-            printf("Meno a Priezvisko [vek]: %s %s [%d]\n", meno, priezvesk, vek);
-        }
-        if (riadok == 5) {
-            sscanf(buffer, "%4s", sedadlo);
-            printf("Označenie sedadla: %s\n\n", sedadlo);
-        }
-    }
+    else {
+        printf("V: Nespravna volba vypisu.\n"); /*iné - program vypíše správu „V: Nespravna volba vypisu.“
+        Správa je nasledovaná znakom konca riadku a program pokračuje v načítavaní ďalších príkazov.  */
+        return;
+    };
 }
 
 void h(FILE **zoznam) {
@@ -501,7 +515,6 @@ float **e(char **c_let, char **c_sedadlo, int *c_batozina, float **c_vahy, int c
 
 int main() {
     char program;
-    int which_v;
     FILE *zoznam = NULL, *checking = NULL;
     //dynamicke polia pre zoznamCK.txt
     char **let = NULL, **meno = NULL, **priezvisko = NULL, **datum = NULL, **sedadlo = NULL;
@@ -520,18 +533,8 @@ int main() {
     while (1) {
         if (scanf(" %c", &program) != 1) break; //ked vstup skonci (EOF), inak by sa cyklus nikdy nezastavil
         if (program == 'v') {
-            scanf("%d", &which_v);
-            if (which_v == 1) {
-                v1(&zoznam, &checking);
-            }
-            else if (which_v == 2) {
-                v2(let, meno, priezvisko, datum, sedadlo, batozina, z_pocet,
-                   c_let, c_sedadlo, c_batozina, c_vahy, c_pocet, polia);
-            }
-            else {
-                printf("V: Nespravna volba vypisu.\n"); /*iné - program vypíše správu „V: Nespravna volba vypisu.“
-                Správa je nasledovaná znakom konca riadku a program pokračuje v načítavaní ďalších príkazov.  */
-            }
+            v(&zoznam, &checking, let, meno, priezvisko, datum, sedadlo, batozina, z_pocet,
+              c_let, c_sedadlo, c_batozina, c_vahy, c_pocet, polia);
         }
         else if (program == 'h') {
             h(&zoznam);
