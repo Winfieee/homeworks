@@ -34,6 +34,10 @@ char *kopia(char *retazec) { //malloc presne tolko bajtov kolko treba (+1 pre '\
     return novy;
 }
 
+/* v2 je napisana az za h (poradie v kode: v1, h, v 2, n, q, w, e), ale v() ju vola uz tu,
+   preto ju tu iba ohlasim (prototyp) - kompilator potom vie, ze taka funkcia existuje */
+void v2(char **z_pole, int z_pocet, char **c_pole, int c_pocet, int polia);
+
 void v(FILE **zoznam, FILE **checkin, char **z_pole, int z_pocet, char **c_pole, int c_pocet, int polia) {
     char buffer[100]; //v1 malo 27, ked bol riadok dlhsi fgets ho rozdelil na 2 casti a riadky sa posunuli
     char meno[16]; //15 + 1 preto ze jeden byte pouzijem pre /0
@@ -84,63 +88,7 @@ void v(FILE **zoznam, FILE **checkin, char **z_pole, int z_pocet, char **c_pole,
         }
     }
     else if (which_v == 2) {
-        /*po aktivovaní program zistí, či dynamické polia boli naplnené (tj. príkaz n už bol aktivovaný).
-          Ak polia ešte neboli naplnené, program vypíše správu „V2: Nenaplnene polia.“*/
-        if (polia == 0) {
-            printf("V2: Nenaplnene polia.\n");
-            return;
-        }
-        for (int i = 0; i < z_pocet; i++) {
-            char let[10], meno2[16], priezvisko[26], datum[10], sedadlo[5];
-            int batozina;
-            /* %[^#] = citaj vsetko az po znak '#' (bez neho), potom '#' preskocim */
-            sscanf(z_pole[i], "%9[^#]#%15[^#]#%25[^#]#%9[^#]#%4[^#]#%d", let, meno2, priezvisko, datum,
-                sedadlo, &batozina);
-            int d = strlen(datum);
-            vek = 2026 - ((datum[d-4]-'0') * 1000 + (datum[d-3]-'0') * 100 + (datum[d-2]-'0') * 10
-                + (datum[d-1]-'0'));
-
-            int najdeny = -1; //index zaznamu v c_pole s rovnakym letom aj sedadlom, -1 = nie je
-            for (int j = 0; j < c_pocet; j++) {
-                char c_let[10], c_sedadlo[5];
-                sscanf(c_pole[j], "%9[^#]#%4[^#]", c_let, c_sedadlo);
-                if (strcmp(c_let, let) == 0 && strcmp(c_sedadlo, sedadlo) == 0) {
-                    najdeny = j;
-                    break;
-                }
-            }
-
-            printf("Oznacenie letu: %s\n", let);
-            printf("Meno a Priezvisko [vek]: %s %s [%d]\n", meno2, priezvisko, vek);
-            printf("Oznacenie sedadla: %c %s\n", sedadlo[0], &sedadlo[1]); //"A35" -> "A 35"
-            if (najdeny == -1) {
-                printf("Status: false\n");
-                printf("Pocet batoziny: %d / 0\n\n", batozina);
-            }
-            else {
-                char c_let[10], c_sedadlo[5];
-                int c_batozina;
-                sscanf(c_pole[najdeny], "%9[^#]#%4[^#]#%d", c_let, c_sedadlo, &c_batozina);
-                printf("Status: true\n");
-                printf("Pocet batoziny: %d / %d ", batozina, c_batozina);
-                /* vahy su za 3. znakom '#': IB1234#A35#2#25.20#18.15
-                   prejdem retazec a za kazdym '#' od tretieho precitam jedno realne cislo */
-                int pocet_hashov = 0;
-                int prva = 1; //pred prvou vahou nedavam ciarku
-                for (int k = 0; c_pole[najdeny][k] != '\0'; k++) {
-                    if (c_pole[najdeny][k] == '#') {
-                        pocet_hashov++;
-                        float vaha;
-                        if (pocet_hashov >= 3 && sscanf(&c_pole[najdeny][k+1], "%f", &vaha) == 1) {
-                            if (prva == 0) printf(",");
-                            printf("[%.2f]", vaha);
-                            prva = 0;
-                        }
-                    }
-                }
-                printf("\n\n");
-            }
-        }
+        v2(z_pole, z_pocet, c_pole, c_pocet, polia); //v 2 je samostatna funkcia nizsie (po h)
     }
     else {
         printf("V: Nespravna volba vypisu.\n"); /*iné - program vypíše správu „V: Nespravna volba vypisu.“
@@ -235,6 +183,67 @@ void h(FILE **zoznam) {
             }
         }
         }
+}
+
+void v2(char **z_pole, int z_pocet, char **c_pole, int c_pocet, int polia) {
+    int vek;
+    /*po aktivovaní program zistí, či dynamické polia boli naplnené (tj. príkaz n už bol aktivovaný).
+      Ak polia ešte neboli naplnené, program vypíše správu „V2: Nenaplnene polia.“*/
+    if (polia == 0) {
+        printf("V2: Nenaplnene polia.\n");
+        return;
+    }
+    for (int i = 0; i < z_pocet; i++) {
+        char let[10], meno[16], priezvisko[26], datum[10], sedadlo[5];
+        int batozina;
+        /* %[^#] = citaj vsetko az po znak '#' (bez neho), potom '#' preskocim */
+        sscanf(z_pole[i], "%9[^#]#%15[^#]#%25[^#]#%9[^#]#%4[^#]#%d", let, meno, priezvisko, datum,
+            sedadlo, &batozina);
+        int d = strlen(datum);
+        vek = 2026 - ((datum[d-4]-'0') * 1000 + (datum[d-3]-'0') * 100 + (datum[d-2]-'0') * 10
+            + (datum[d-1]-'0'));
+
+        int najdeny = -1; //index zaznamu v c_pole s rovnakym letom aj sedadlom, -1 = nie je
+        for (int j = 0; j < c_pocet; j++) {
+            char c_let[10], c_sedadlo[5];
+            sscanf(c_pole[j], "%9[^#]#%4[^#]", c_let, c_sedadlo);
+            if (strcmp(c_let, let) == 0 && strcmp(c_sedadlo, sedadlo) == 0) {
+                najdeny = j;
+                break;
+            }
+        }
+
+        printf("Oznacenie letu: %s\n", let);
+        printf("Meno a Priezvisko [vek]: %s %s [%d]\n", meno, priezvisko, vek);
+        printf("Oznacenie sedadla: %c %s\n", sedadlo[0], &sedadlo[1]); //"A35" -> "A 35"
+        if (najdeny == -1) {
+            printf("Status: false\n");
+            printf("Pocet batoziny: %d / 0\n\n", batozina);
+        }
+        else {
+            char c_let[10], c_sedadlo[5];
+            int c_batozina;
+            sscanf(c_pole[najdeny], "%9[^#]#%4[^#]#%d", c_let, c_sedadlo, &c_batozina);
+            printf("Status: true\n");
+            printf("Pocet batoziny: %d / %d ", batozina, c_batozina);
+            /* vahy su za 3. znakom '#': IB1234#A35#2#25.20#18.15
+               prejdem retazec a za kazdym '#' od tretieho precitam jedno realne cislo */
+            int pocet_hashov = 0;
+            int prva = 1; //pred prvou vahou nedavam ciarku
+            for (int k = 0; c_pole[najdeny][k] != '\0'; k++) {
+                if (c_pole[najdeny][k] == '#') {
+                    pocet_hashov++;
+                    float vaha;
+                    if (pocet_hashov >= 3 && sscanf(&c_pole[najdeny][k+1], "%f", &vaha) == 1) {
+                        if (prva == 0) printf(",");
+                        printf("[%.2f]", vaha);
+                        prva = 0;
+                    }
+                }
+            }
+            printf("\n\n");
+        }
+    }
 }
 
 void n(FILE **zoznam, FILE **checkin, char ***z_pole, int *z_pocet, char ***c_pole, int *c_pocet, int *polia) {
