@@ -8,15 +8,11 @@
    zoznamCK.txt: let[i], meno[i], priezvisko[i], datum[i], sedadlo[i], batozina[i]
    checkin1.txt: c_let[i], c_sedadlo[i], c_batozina[i], c_vahy[i][0..c_batozina[i]-1] */
 
-/* V2: v2() je napisana az za h (poradie: v1, h, v 2, n, q, w, e), ale v() ju vola uz tu,
-   preto ju tu iba ohlasim (prototyp) - kompilator potom vie, ze taka funkcia existuje */
-void v2(char **let, char **meno, char **priezvisko, char **datum, char **sedadlo, int *batozina, int z_pocet,
-        char **c_let, char **c_sedadlo, int *c_batozina, float **c_vahy, int c_pocet, int polia);
-
 void v(FILE **zoznam, FILE **checkin,
        char **let, char **meno_p, char **priezvisko, char **datum, char **sedadlo, int *batozina, int z_pocet,
        char **c_let, char **c_sedadlo, int *c_batozina, float **c_vahy, int c_pocet, int polia) {
-    //V2: pridane parametre s dynamickymi poliami - v() ich iba posunie do v2()
+    //V2: pridane parametre s dynamickymi poliami - pouziju sa vo vetve which_v == 2
+    //(meno_p, lebo premenna meno[16] uz je nizsie z v1)
     char buffer[27];
     char meno[16]; //15 + 1 preto ze jeden byte pouzijem pre /0
     char priezvesk[26];
@@ -67,8 +63,43 @@ void v(FILE **zoznam, FILE **checkin,
         }
     }
     else if (which_v == 2) { //V2: pridane - vypis z dynamickych poli
-        v2(let, meno_p, priezvisko, datum, sedadlo, batozina, z_pocet,
-           c_let, c_sedadlo, c_batozina, c_vahy, c_pocet, polia);
+        /*po aktivovaní program zistí, či dynamické polia boli naplnené (tj. príkaz n už bol aktivovaný).
+          Ak polia ešte neboli naplnené, program vypíše správu „V2: Nenaplnene polia.“*/
+        if (polia == 0) {
+            printf("V2: Nenaplnene polia.\n");
+            return;
+        }
+        for (int i = 0; i < z_pocet; i++) {
+            int d = strlen(datum[i]); //vek - posledne 4 cislice datumu DDMMRRRR
+            vek = 2026 - ((datum[i][d-4]-'0') * 1000 + (datum[i][d-3]-'0') * 100 + (datum[i][d-2]-'0') * 10
+                + (datum[i][d-1]-'0'));
+
+            int najdeny = -1; //index v checkin poliach s rovnakym letom aj sedadlom, -1 = checkin nebol
+            for (int j = 0; j < c_pocet; j++) {
+                if (strcmp(c_let[j], let[i]) == 0 && strcmp(c_sedadlo[j], sedadlo[i]) == 0) {
+                    najdeny = j;
+                    break;
+                }
+            }
+
+            printf("Oznacenie letu: %s\n", let[i]);
+            printf("Meno a Priezvisko [vek]: %s %s [%d]\n", meno_p[i], priezvisko[i], vek);
+            printf("Oznacenie sedadla: %c %s\n", sedadlo[i][0], sedadlo[i] + 1); //"A35" -> "A 35"
+            if (najdeny == -1) {
+                printf("Status: false\n");
+                printf("Pocet batoziny: %d / 0\n", batozina[i]);
+            }
+            else {
+                printf("Status: true\n");
+                printf("Pocet batoziny: %d / %d ", batozina[i], c_batozina[najdeny]);
+                for (int k = 0; k < c_batozina[najdeny]; k++) {
+                    if (k > 0) printf(","); //pri viacerých batožinách budú zátvorky oddelené čiarkou
+                    printf("[%.2f]", c_vahy[najdeny][k]);
+                }
+                printf("\n");
+            }
+            printf("\n"); //(prázdny riadok)
+        }
     }
     else {
         printf("V: Nespravna volba vypisu.\n"); /*iné - program vypíše správu „V: Nespravna volba vypisu.“
@@ -163,47 +194,6 @@ void h(FILE **zoznam) {
             }
         }
         }
-}
-
-void v2(char **let, char **meno, char **priezvisko, char **datum, char **sedadlo, int *batozina, int z_pocet,
-        char **c_let, char **c_sedadlo, int *c_batozina, float **c_vahy, int c_pocet, int polia) {
-    /*po aktivovaní program zistí, či dynamické polia boli naplnené (tj. príkaz n už bol aktivovaný).
-      Ak polia ešte neboli naplnené, program vypíše správu „V2: Nenaplnene polia.“*/
-    if (polia == 0) {
-        printf("V2: Nenaplnene polia.\n");
-        return;
-    }
-    for (int i = 0; i < z_pocet; i++) {
-        int d = strlen(datum[i]); //vek ako vo v1 - posledne 4 cislice datumu
-        int vek = 2026 - ((datum[i][d-4]-'0') * 1000 + (datum[i][d-3]-'0') * 100 + (datum[i][d-2]-'0') * 10
-            + (datum[i][d-1]-'0'));
-
-        int najdeny = -1; //index v checkin poliach s rovnakym letom aj sedadlom, -1 = checkin nebol
-        for (int j = 0; j < c_pocet; j++) {
-            if (strcmp(c_let[j], let[i]) == 0 && strcmp(c_sedadlo[j], sedadlo[i]) == 0) {
-                najdeny = j;
-                break;
-            }
-        }
-
-        printf("Oznacenie letu: %s\n", let[i]);
-        printf("Meno a Priezvisko [vek]: %s %s [%d]\n", meno[i], priezvisko[i], vek);
-        printf("Oznacenie sedadla: %c %s\n", sedadlo[i][0], sedadlo[i] + 1); //"A35" -> "A 35"
-        if (najdeny == -1) {
-            printf("Status: false\n");
-            printf("Pocet batoziny: %d / 0\n", batozina[i]);
-        }
-        else {
-            printf("Status: true\n");
-            printf("Pocet batoziny: %d / %d ", batozina[i], c_batozina[najdeny]);
-            for (int k = 0; k < c_batozina[najdeny]; k++) {
-                if (k > 0) printf(","); //pri viacerých batožinách budú zátvorky oddelené čiarkou
-                printf("[%.2f]", c_vahy[najdeny][k]);
-            }
-            printf("\n");
-        }
-        printf("\n"); //(prázdny riadok)
-    }
 }
 
 void n(FILE **zoznam, FILE **checkin,
