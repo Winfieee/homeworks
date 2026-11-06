@@ -235,7 +235,9 @@ void n(FILE **zoznam, FILE **checkin,
         *polia = 0;
     }
 
-    char buffer[256];
+    char buffer[27]; //najdlhsi riadok zoznamu: priezvisko 25 + '\n' + '\0' = 27 (ako vo v1)
+    char c_buffer[69]; /*najdlhsi riadok checkinu: let 6 + #, sedadlo 3 + #, kusy 1 + #,
+                         9 vah po 5 znakov (XX.XX) + # = 7 + 4 + 2 + 9*6 = 67, + '\n' + '\0' = 69 */
     int pocet_z = 0, pocet_c = 0;
     //1. prechod: spočíta počet záznamov v jednotlivých txt súboroch
     rewind(*zoznam);
@@ -243,8 +245,8 @@ void n(FILE **zoznam, FILE **checkin,
         if (buffer[0] == '#') pocet_z++; //kazdy zaznam zacina '#'
     }
     rewind(*checkin);
-    while (fgets(buffer, sizeof(buffer), *checkin) != NULL) {
-        if (buffer[0] != '\n' && buffer[0] != '\r' && buffer[0] != '\0') pocet_c++; //1 riadok = 1 zaznam
+    while (fgets(c_buffer, sizeof(c_buffer), *checkin) != NULL) {
+        if (c_buffer[0] != '\n' && c_buffer[0] != '\r' && c_buffer[0] != '\0') pocet_c++; //1 riadok = 1 zaznam
     }
 
     //dynamicky vytvorí polia pre jednotlivé položky podľa počtu záznamov (malloc)
@@ -260,7 +262,7 @@ void n(FILE **zoznam, FILE **checkin,
     *c_vahy = malloc(pocet_c * sizeof(float *));
 
     //2. prechod: do jednotlivých polí sa zapíšu jednotlivé záznamy v takom poradí, v akom sú v textovom súbore
-    char slovo[30]; //sem si precitam polozku, potom ju skopirujem do pola
+    char slovo[26]; //sem si precitam polozku - najdlhsia je priezvisko 25 + 1 pre '\0'
     int riadok = 0;
     int i = -1; //index zaznamu, pri prvom '#' bude 0
     rewind(*zoznam);
@@ -308,16 +310,16 @@ void n(FILE **zoznam, FILE **checkin,
     //checkin1.txt: IB1234#A35#2#25.20#18.15
     i = 0;
     rewind(*checkin);
-    while (fgets(buffer, sizeof(buffer), *checkin) != NULL) {
-        if (buffer[0] == '\n' || buffer[0] == '\r' || buffer[0] == '\0') {
+    while (fgets(c_buffer, sizeof(c_buffer), *checkin) != NULL) {
+        if (c_buffer[0] == '\n' || c_buffer[0] == '\r' || c_buffer[0] == '\0') {
             continue;
         }
-        for (int k = 0; buffer[k] != '\0'; k++) { //'#' zmenim na medzeru, potom staci obycajny sscanf
-            if (buffer[k] == '#') buffer[k] = ' ';
+        for (int k = 0; c_buffer[k] != '\0'; k++) { //'#' zmenim na medzeru, potom staci obycajny sscanf
+            if (c_buffer[k] == '#') c_buffer[k] = ' ';
         }
-        char c_let_temp[10], c_sedadlo_temp[5];
+        char c_let_temp[7], c_sedadlo_temp[4]; //let 6 + 1, sedadlo 3 + 1 pre '\0'
         int pocet_kusov;
-        sscanf(buffer, "%s %s %d", c_let_temp, c_sedadlo_temp, &pocet_kusov);
+        sscanf(c_buffer, "%s %s %d", c_let_temp, c_sedadlo_temp, &pocet_kusov);
 
         (*c_let)[i] = malloc(strlen(c_let_temp) + 1);
         strcpy((*c_let)[i], c_let_temp);
@@ -329,11 +331,11 @@ void n(FILE **zoznam, FILE **checkin,
         //vahy su za 3. medzerou (predtym za 3. '#'): za kazdou medzerou od tretej precitam jedno cislo
         int medzery = 0;
         int index_vahy = 0;
-        for (int k = 0; buffer[k] != '\0' && index_vahy < pocet_kusov; k++) {
-            if (buffer[k] == ' ') {
+        for (int k = 0; c_buffer[k] != '\0' && index_vahy < pocet_kusov; k++) {
+            if (c_buffer[k] == ' ') {
                 medzery++;
                 if (medzery >= 3) {
-                    sscanf(&buffer[k+1], "%f", &(*c_vahy)[i][index_vahy]);
+                    sscanf(&c_buffer[k+1], "%f", &(*c_vahy)[i][index_vahy]);
                     index_vahy++;
                 }
             }
@@ -347,7 +349,7 @@ void n(FILE **zoznam, FILE **checkin,
 void q(char ***let, char ***meno, char ***priezvisko, char ***datum, char ***sedadlo, int **batozina,
        int *z_pocet, int polia) {
     int y;
-    char novy_let[10], nove_meno[16], nove_priezvisko[26], novy_datum[10], nove_sedadlo[5];
+    char novy_let[7], nove_meno[16], nove_priezvisko[26], novy_datum[9], nove_sedadlo[4]; //podla formatu + 1 pre '\0'
     int nova_batozina;
     scanf("%d", &y); //ako vo v(): najprv nacitam vstup, az potom kontrolujem
     scanf("%s %s %s %s %s %d", novy_let, nove_meno, nove_priezvisko, novy_datum, nove_sedadlo, &nova_batozina);
@@ -396,7 +398,7 @@ void q(char ***let, char ***meno, char ***priezvisko, char ***datum, char ***sed
 
 void w(char ***let, char ***meno, char ***priezvisko, char ***datum, char ***sedadlo, int **batozina,
        int *z_pocet, int polia) {
-    char hladany_let[10];
+    char hladany_let[7]; //let 6 + 1 pre '\0'
     scanf("%s", hladany_let); //najprv nacitam, potom kontrolujem (ako v q)
     if (polia == 0) {
         printf("W: Polia nie su vytvorene.\n");
@@ -435,7 +437,7 @@ void w(char ***let, char ***meno, char ***priezvisko, char ***datum, char ***sed
 }
 
 float **e(char **c_let, char **c_sedadlo, int *c_batozina, float **c_vahy, int c_pocet, int polia) {
-    char hladane_sedadlo[5];
+    char hladane_sedadlo[4]; //sedadlo 3 + 1 pre '\0'
     scanf("%s", hladane_sedadlo); //najprv nacitam, potom kontrolujem (ako v q)
     if (polia == 0) {
         printf("E: Polia nie su vytvorene.\n");
