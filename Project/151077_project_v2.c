@@ -5,8 +5,8 @@
 /* V2: ako v1 + dynamicke polia (v 2, n, q, w, e).
    Struktury sa nesmu pouzit, preto mam pre kazdu polozku samostatne pole (ako velke[] a char_velke[] v h).
    Zaznam cislo i je vo vsetkych poliach na rovnakom indexe i.
-   zoznamCK.txt: let[i], meno[i], priezvisko[i], datum[i], sedadlo[i], batozina[i]
-   checkin1.txt: c_let[i], c_sedadlo[i], c_batozina[i], c_vahy[i][0..c_batozina[i]-1] */
+   zoznamCK.txt: oznac_letov[i], mena[i], priezviska[i], datumy[i], sedadla[i], batoziny[i]
+   checkin1.txt: registered_oznac_letov[i], registered_sedadla[i], registered_batoziny[i], vahy_batoziny[i][0..registered_batoziny[i]-1] */
 
 void v(FILE **zoznam, FILE **checkin,
        char **oznac_letov, char **mena, char **priezviska, char **datumy, char **sedadla, int *batoziny, int pocet_pasaz,
