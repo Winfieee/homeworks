@@ -387,12 +387,12 @@ char **e(char **c_pole, int c_pocet, int polia) {
     //pre každú batožinu bude možné zadať novú váhu z klávesnice
     float *vahy = malloc((spolu + 1) * sizeof(float)); //+1 aby malloc(0) nikdy nebol
     if (vahy == NULL) return c_pole;
-    printf("Zadaj %d vahy: ", spolu);
+    printf("Zadaj %d váhy: ", spolu); //presne ako v ukazke (s diakritikou)
     for (int i = 0; i < spolu; i++) {
         scanf("%f", &vahy[i]);
     }
     //Program najprv vypíše pôvodný obsah poľa v tvare v akom je uložený v txt súbore...
-    printf("\n");
+    //(bez prazdneho riadku navyse - Enter po vahach uz novy riadok spravil, v ukazke tam nic nie je)
     for (int i = 0; i < c_pocet; i++) {
         printf("%s\n", c_pole[i]);
     }
