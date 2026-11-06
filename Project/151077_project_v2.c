@@ -1,74 +1,65 @@
 #include<stdio.h>
 #include<stdlib.h>
-#include<string.h> //strlen, strcpy, strcmp, strcspn - pre retazce v dynamickych poliach
+#include<string.h> //strlen, strcpy, strcmp - pre retazce v dynamickych poliach
 
-/* V2: ako v1, ale pribudli dynamicke polia (n, v 2, q, w, e).
-   Struktury sa nesmu pouzit, preto kazdy zaznam ulozim ako JEDEN retazec, polozky oddelim znakom '#'.
-   z_pole (zoznamCK.txt):  "IB1234#Jozko#Mrkvicka#20101980#A35#2"
-   c_pole (checkin1.txt):  "IB1234#A35#2#25.20#18.15"  (tak ako je v subore)
-   Takze pre kazdy subor mam jedno pole retazcov (char **) a pocet zaznamov (int). */
+/* V2: ako v1 + dynamicke polia (v 2, n, q, w, e).
+   Struktury sa nesmu pouzit, preto mam pre kazdu polozku samostatne pole (ako velke[] a char_velke[] v h).
+   Zaznam cislo i je vo vsetkych poliach na rovnakom indexe i.
+   zoznamCK.txt: let[i], meno[i], priezvisko[i], datum[i], sedadlo[i], batozina[i]
+   checkin1.txt: c_let[i], c_sedadlo[i], c_batozina[i], c_vahy[i][0..c_batozina[i]-1] */
 
-/* v2 je napisana az za h (poradie v kode: v1, h, v 2, n, q, w, e), ale v() ju vola uz tu,
-   preto ju tu iba ohlasim (prototyp) - kompilator potom vie, ze taka funkcia existuje */
-void v2(char **z_pole, int z_pocet, char **c_pole, int c_pocet, int polia);
-
-void v(FILE **zoznam, FILE **checkin, char **z_pole, int z_pocet, char **c_pole, int c_pocet, int polia) {
+void v1(FILE **zoznam, FILE **checkin) {
     char buffer[100]; //v1 malo 27, ked bol riadok dlhsi fgets ho rozdelil na 2 casti a riadky sa posunuli
+    char let[10];
     char meno[16]; //15 + 1 preto ze jeden byte pouzijem pre /0
     char priezvesk[26];
+    char sedadlo[5];
     int riadok = 0;
     int vek;
-    int which_v;
-    scanf("%d", &which_v);
-    if (which_v == 1) { //po aktivovaní program zistí, či txt súbory už boli otvorené (všetky 2 txt súbory)
-        if (*zoznam == NULL) {
-            *zoznam = fopen("zoznamCK.txt", "r"); //Ak súbory ešte neboli otvorené...
-        }
-        if (*checkin == NULL) {
-            *checkin = fopen("checkin1.txt", "r"); //...program sa ich pokúsi otvoriť.
-        }
-        if (*zoznam == NULL || *checkin == NULL) {
-            printf("V1: Neotvorene txt subory.\n"); //prípade, ak sa aspoň jeden txt súbor nepodarí otoriť
-            return;                                       //program vypíše správu„V1: Neotvorene txt subory.“
-        }
-        rewind(*zoznam);
-        while (fgets(buffer, sizeof(buffer), *zoznam) != NULL) {
-            buffer[strcspn(buffer, "\r\n")] = '\0'; /*fgets necha na konci '\n' (z Windowsu aj "\r\n"),
-                strcspn vrati poziciu prveho '\r' alebo '\n' a tam retazec ukoncim*/
-            if (buffer[0] == '\0') continue; //"(môže byť aj prázdny riadok)" - prazdne riadky preskocim
-            if (buffer[0] == '#') { /*novy format: kazdy zaznam zacina '#', takze tu zacinam pocitat od 0
-                                     (v1 resetovalo az na prazdnom riadku, ten tam ale byt nemusi)*/
-                riadok = 0;
-                continue;
-            }
-            riadok++; //1 = let, 2 = meno, 3 = priezvisko, 4 = datum, 5 = sedadlo, 6 = batozina
-            if (riadok == 1) {
-                printf("Označenie letu: %s\n", buffer);
-            }
-            if (riadok == 2) {
-                sscanf(buffer, "%15s", meno); //%15s aby som neprepisal pamat za polom meno
-            }
-            if (riadok == 3) {
-                sscanf(buffer, "%25s", priezvesk);
-            }
-            if (riadok == 4) {
-                int d = strlen(buffer); //rok su posledne 4 cislice datumu DDMMRRRR
-                vek = 2026 - ((buffer[d-4]-'0') * 1000 + (buffer[d-3]-'0') * 100 + (buffer[d-2]-'0') * 10
-                    + (buffer[d-1]-'0'));
-                printf("Meno a Priezvisko [vek]: %s %s [%d]\n", meno, priezvesk, vek);
-            }
-            if (riadok == 5) {
-                printf("Označenie sedadla: %s\n\n", buffer);
-            }
-        }
+    //po aktivovaní program zistí, či txt súbory už boli otvorené (všetky 2 txt súbory)
+    if (*zoznam == NULL) {
+        *zoznam = fopen("zoznamCK.txt", "r"); //Ak súbory ešte neboli otvorené...
     }
-    else if (which_v == 2) {
-        v2(z_pole, z_pocet, c_pole, c_pocet, polia); //v 2 je samostatna funkcia nizsie (po h)
+    if (*checkin == NULL) {
+        *checkin = fopen("checkin1.txt", "r"); //...program sa ich pokúsi otvoriť.
     }
-    else {
-        printf("V: Nespravna volba vypisu.\n"); /*iné - program vypíše správu „V: Nespravna volba vypisu.“
-        Správa je nasledovaná znakom konca riadku a program pokračuje v načítavaní ďalších príkazov.  */
-        return;
+    if (*zoznam == NULL || *checkin == NULL) {
+        printf("V1: Neotvorene txt subory.\n"); //prípade, ak sa aspoň jeden txt súbor nepodarí otoriť
+        return;                                       //program vypíše správu„V1: Neotvorene txt subory.“
+    }
+    rewind(*zoznam);
+    while (fgets(buffer, sizeof(buffer), *zoznam) != NULL) {
+        if (buffer[0] == '\n' || buffer[0] == '\r' || buffer[0] == '\0') {
+            continue; //"(môže byť aj prázdny riadok)" - prazdny riadok preskocim
+        }
+        if (buffer[0] == '#') { /*novy format: kazdy zaznam zacina '#', takze tu zacinam pocitat od 0
+                                 (v1 resetovalo az na prazdnom riadku, ten tam ale byt nemusi)*/
+            riadok = 0;
+            continue;
+        }
+        riadok++; //1 = let, 2 = meno, 3 = priezvisko, 4 = datum, 5 = sedadlo, 6 = batozina
+        if (riadok == 1) {
+            sscanf(buffer, "%9s", let); //sscanf %s zoberie iba slovo, '\n' na konci tam nebude
+            printf("Označenie letu: %s\n", let);
+        }
+        if (riadok == 2) {
+            sscanf(buffer, "%15s", meno); //%15s aby som neprepisal pamat za polom meno
+        }
+        if (riadok == 3) {
+            sscanf(buffer, "%25s", priezvesk);
+        }
+        if (riadok == 4) {
+            char datum[10];
+            sscanf(buffer, "%9s", datum);
+            int d = strlen(datum); //rok su posledne 4 cislice datumu DDMMRRRR
+            vek = 2026 - ((datum[d-4]-'0') * 1000 + (datum[d-3]-'0') * 100 + (datum[d-2]-'0') * 10
+                + (datum[d-1]-'0'));
+            printf("Meno a Priezvisko [vek]: %s %s [%d]\n", meno, priezvesk, vek);
+        }
+        if (riadok == 5) {
+            sscanf(buffer, "%4s", sedadlo);
+            printf("Označenie sedadla: %s\n\n", sedadlo);
+        }
     }
 }
 
@@ -160,8 +151,8 @@ void h(FILE **zoznam) {
         }
 }
 
-void v2(char **z_pole, int z_pocet, char **c_pole, int c_pocet, int polia) {
-    int vek;
+void v2(char **let, char **meno, char **priezvisko, char **datum, char **sedadlo, int *batozina, int z_pocet,
+        char **c_let, char **c_sedadlo, int *c_batozina, float **c_vahy, int c_pocet, int polia) {
     /*po aktivovaní program zistí, či dynamické polia boli naplnené (tj. príkaz n už bol aktivovaný).
       Ak polia ešte neboli naplnené, program vypíše správu „V2: Nenaplnene polia.“*/
     if (polia == 0) {
@@ -169,59 +160,41 @@ void v2(char **z_pole, int z_pocet, char **c_pole, int c_pocet, int polia) {
         return;
     }
     for (int i = 0; i < z_pocet; i++) {
-        char let[10], meno[16], priezvisko[26], datum[10], sedadlo[5];
-        int batozina;
-        /* %[^#] = citaj vsetko az po znak '#' (bez neho), potom '#' preskocim */
-        sscanf(z_pole[i], "%9[^#]#%15[^#]#%25[^#]#%9[^#]#%4[^#]#%d", let, meno, priezvisko, datum,
-            sedadlo, &batozina);
-        int d = strlen(datum);
-        vek = 2026 - ((datum[d-4]-'0') * 1000 + (datum[d-3]-'0') * 100 + (datum[d-2]-'0') * 10
-            + (datum[d-1]-'0'));
+        int d = strlen(datum[i]); //vek ako vo v1 - posledne 4 cislice datumu
+        int vek = 2026 - ((datum[i][d-4]-'0') * 1000 + (datum[i][d-3]-'0') * 100 + (datum[i][d-2]-'0') * 10
+            + (datum[i][d-1]-'0'));
 
-        int najdeny = -1; //index zaznamu v c_pole s rovnakym letom aj sedadlom, -1 = nie je
+        int najdeny = -1; //index v checkin poliach s rovnakym letom aj sedadlom, -1 = checkin nebol
         for (int j = 0; j < c_pocet; j++) {
-            char c_let[10], c_sedadlo[5];
-            sscanf(c_pole[j], "%9[^#]#%4[^#]", c_let, c_sedadlo);
-            if (strcmp(c_let, let) == 0 && strcmp(c_sedadlo, sedadlo) == 0) {
+            if (strcmp(c_let[j], let[i]) == 0 && strcmp(c_sedadlo[j], sedadlo[i]) == 0) {
                 najdeny = j;
                 break;
             }
         }
 
-        printf("Oznacenie letu: %s\n", let);
-        printf("Meno a Priezvisko [vek]: %s %s [%d]\n", meno, priezvisko, vek);
-        printf("Oznacenie sedadla: %c %s\n", sedadlo[0], &sedadlo[1]); //"A35" -> "A 35"
+        printf("Oznacenie letu: %s\n", let[i]);
+        printf("Meno a Priezvisko [vek]: %s %s [%d]\n", meno[i], priezvisko[i], vek);
+        printf("Oznacenie sedadla: %c %s\n", sedadlo[i][0], sedadlo[i] + 1); //"A35" -> "A 35"
         if (najdeny == -1) {
             printf("Status: false\n");
-            printf("Pocet batoziny: %d / 0\n\n", batozina);
+            printf("Pocet batoziny: %d / 0\n", batozina[i]);
         }
         else {
-            char c_let[10], c_sedadlo[5];
-            int c_batozina;
-            sscanf(c_pole[najdeny], "%9[^#]#%4[^#]#%d", c_let, c_sedadlo, &c_batozina);
             printf("Status: true\n");
-            printf("Pocet batoziny: %d / %d ", batozina, c_batozina);
-            /* vahy su za 3. znakom '#': IB1234#A35#2#25.20#18.15
-               prejdem retazec a za kazdym '#' od tretieho precitam jedno realne cislo */
-            int pocet_hashov = 0;
-            int prva = 1; //pred prvou vahou nedavam ciarku
-            for (int k = 0; c_pole[najdeny][k] != '\0'; k++) {
-                if (c_pole[najdeny][k] == '#') {
-                    pocet_hashov++;
-                    float vaha;
-                    if (pocet_hashov >= 3 && sscanf(&c_pole[najdeny][k+1], "%f", &vaha) == 1) {
-                        if (prva == 0) printf(",");
-                        printf("[%.2f]", vaha);
-                        prva = 0;
-                    }
-                }
+            printf("Pocet batoziny: %d / %d ", batozina[i], c_batozina[najdeny]);
+            for (int k = 0; k < c_batozina[najdeny]; k++) {
+                if (k > 0) printf(","); //pri viacerých batožinách budú zátvorky oddelené čiarkou
+                printf("[%.2f]", c_vahy[najdeny][k]);
             }
-            printf("\n\n");
+            printf("\n");
         }
+        printf("\n"); //(prázdny riadok)
     }
 }
 
-void n(FILE **zoznam, FILE **checkin, char ***z_pole, int *z_pocet, char ***c_pole, int *c_pocet, int *polia) {
+void n(FILE **zoznam, FILE **checkin,
+       char ***let, char ***meno, char ***priezvisko, char ***datum, char ***sedadlo, int **batozina, int *z_pocet,
+       char ***c_let, char ***c_sedadlo, int **c_batozina, float ***c_vahy, int *c_pocet, int *polia) {
     /*Ak aspoň jeden zo súborov nie je otvorený (t.j. ešte nebol vykonaný príkaz ‘v 1’), táto voľba nič
       nezmení a vypíše správu „N: Neotvoreny subor.“*/
     if (*zoznam == NULL || *checkin == NULL) {
@@ -229,22 +202,33 @@ void n(FILE **zoznam, FILE **checkin, char ***z_pole, int *z_pocet, char ***c_po
         return;
     }
     //Ak už boli polia predtým vytvorené, sú najprv korektne dealokované a potom sa vytvoria nové.
-    if (*z_pole != NULL) { //najprv kazdy retazec, potom samotne pole
-        for (int i = 0; i < *z_pocet; i++) {
-            free((*z_pole)[i]);
+    if (*polia == 1) {
+        for (int i = 0; i < *z_pocet; i++) { //najprv kazdy retazec...
+            free((*let)[i]);
+            free((*meno)[i]);
+            free((*priezvisko)[i]);
+            free((*datum)[i]);
+            free((*sedadlo)[i]);
         }
-        free(*z_pole);
-    }
-    if (*c_pole != NULL) {
+        free(*let); //...potom samotne polia
+        free(*meno);
+        free(*priezvisko);
+        free(*datum);
+        free(*sedadlo);
+        free(*batozina);
         for (int i = 0; i < *c_pocet; i++) {
-            free((*c_pole)[i]);
+            free((*c_let)[i]);
+            free((*c_sedadlo)[i]);
+            free((*c_vahy)[i]);
         }
-        free(*c_pole);
+        free(*c_let);
+        free(*c_sedadlo);
+        free(*c_batozina);
+        free(*c_vahy);
+        *z_pocet = 0;
+        *c_pocet = 0;
+        *polia = 0;
     }
-    *z_pole = NULL;
-    *c_pole = NULL;
-    *z_pocet = 0;
-    *c_pocet = 0;
 
     char buffer[256];
     int pocet_z = 0, pocet_c = 0;
@@ -255,68 +239,109 @@ void n(FILE **zoznam, FILE **checkin, char ***z_pole, int *z_pocet, char ***c_po
     }
     rewind(*checkin);
     while (fgets(buffer, sizeof(buffer), *checkin) != NULL) {
-        buffer[strcspn(buffer, "\r\n")] = '\0'; //odstranim '\n' na konci (ako vo v())
-        if (buffer[0] != '\0') pocet_c++; //jeden neprazdny riadok = jeden zaznam
+        if (buffer[0] != '\n' && buffer[0] != '\r' && buffer[0] != '\0') pocet_c++; //1 riadok = 1 zaznam
     }
 
-    //dynamicky vytvorí polia podľa počtu záznamov (malloc)
-    *z_pole = malloc(pocet_z * sizeof(char *));
-    *c_pole = malloc(pocet_c * sizeof(char *));
-    if ((pocet_z > 0 && *z_pole == NULL) || (pocet_c > 0 && *c_pole == NULL)) {
-        free(*z_pole);
-        free(*c_pole);
-        *z_pole = NULL;
-        *c_pole = NULL;
+    //dynamicky vytvorí polia pre jednotlivé položky podľa počtu záznamov (malloc)
+    *let = malloc((pocet_z + 1) * sizeof(char *)); //+1 aby som nerobil malloc(0) ked je subor prazdny
+    *meno = malloc((pocet_z + 1) * sizeof(char *));
+    *priezvisko = malloc((pocet_z + 1) * sizeof(char *));
+    *datum = malloc((pocet_z + 1) * sizeof(char *));
+    *sedadlo = malloc((pocet_z + 1) * sizeof(char *));
+    *batozina = malloc((pocet_z + 1) * sizeof(int));
+    *c_let = malloc((pocet_c + 1) * sizeof(char *));
+    *c_sedadlo = malloc((pocet_c + 1) * sizeof(char *));
+    *c_batozina = malloc((pocet_c + 1) * sizeof(int));
+    *c_vahy = malloc((pocet_c + 1) * sizeof(float *));
+    if (*let == NULL || *meno == NULL || *priezvisko == NULL || *datum == NULL || *sedadlo == NULL ||
+        *batozina == NULL || *c_let == NULL || *c_sedadlo == NULL || *c_batozina == NULL || *c_vahy == NULL) {
         return;
     }
 
-    //2. prechod: zapíše jednotlivé záznamy v takom poradí, v akom sú v textovom súbore
-    char let[10], meno[16], priezvisko[26], datum[10], sedadlo[5], batozina[3];
+    //2. prechod: do jednotlivých polí sa zapíšu jednotlivé záznamy v takom poradí, v akom sú v textovom súbore
+    char slovo[30]; //sem si najprv precitam polozku, potom ju skopirujem do pola presne tak dlhu ako je
     int riadok = 0;
+    int i = -1; //index zaznamu, pri prvom '#' bude 0
     rewind(*zoznam);
-    while (fgets(buffer, sizeof(buffer), *zoznam) != NULL && *z_pocet < pocet_z) {
-        buffer[strcspn(buffer, "\r\n")] = '\0';
-        if (buffer[0] == '\0') continue;
-        if (buffer[0] == '#') {
+    while (fgets(buffer, sizeof(buffer), *zoznam) != NULL) {
+        if (buffer[0] == '\n' || buffer[0] == '\r' || buffer[0] == '\0') {
+            continue;
+        }
+        if (buffer[0] == '#') { //novy zaznam
+            i++;
             riadok = 0;
             continue;
         }
-        riadok++; //rovnake cislovanie ako vo v(): 1 let ... 6 batozina
-        if (riadok == 1) sscanf(buffer, "%9s", let);
-        if (riadok == 2) sscanf(buffer, "%15s", meno);
-        if (riadok == 3) sscanf(buffer, "%25s", priezvisko);
-        if (riadok == 4) sscanf(buffer, "%9s", datum);
-        if (riadok == 5) sscanf(buffer, "%4s", sedadlo);
-        if (riadok == 6) { //posledna polozka -> mam cely zaznam, spojim ho do jedneho retazca
-            sscanf(buffer, "%2s", batozina);
-            char zaznam[100];
-            sprintf(zaznam, "%s#%s#%s#%s#%s#%s", let, meno, priezvisko, datum, sedadlo, batozina);
-            (*z_pole)[*z_pocet] = malloc(strlen(zaznam) + 1); //presne tolko bajtov kolko treba (+1 pre '\0')
-            if ((*z_pole)[*z_pocet] == NULL) break;
-            strcpy((*z_pole)[*z_pocet], zaznam);
-            (*z_pocet)++;
+        if (i < 0 || i >= pocet_z) continue;
+        riadok++; //rovnake cislovanie ako vo v1: 1 let ... 6 batozina
+        if (riadok == 6) {
+            sscanf(buffer, "%d", &(*batozina)[i]);
+            *z_pocet = i + 1; //zaznam je cely
+            continue;
         }
+        sscanf(buffer, "%29s", slovo);
+        char *novy = malloc(strlen(slovo) + 1); //+1 pre '\0'
+        if (novy == NULL) continue;
+        strcpy(novy, slovo);
+        if (riadok == 1) (*let)[i] = novy;
+        else if (riadok == 2) (*meno)[i] = novy;
+        else if (riadok == 3) (*priezvisko)[i] = novy;
+        else if (riadok == 4) (*datum)[i] = novy;
+        else if (riadok == 5) (*sedadlo)[i] = novy;
+        else free(novy); //riadok navyse - nepotrebujem ho
     }
+
+    //checkin1.txt: IB1234#A35#2#25.20#18.15
+    i = 0;
     rewind(*checkin);
-    while (fgets(buffer, sizeof(buffer), *checkin) != NULL && *c_pocet < pocet_c) {
-        buffer[strcspn(buffer, "\r\n")] = '\0';
-        if (buffer[0] == '\0') continue;
-        (*c_pole)[*c_pocet] = malloc(strlen(buffer) + 1); //riadok checkinu ulozim presne tak ako je
-        if ((*c_pole)[*c_pocet] == NULL) break;
-        strcpy((*c_pole)[*c_pocet], buffer);
-        (*c_pocet)++;
+    while (fgets(buffer, sizeof(buffer), *checkin) != NULL && i < pocet_c) {
+        if (buffer[0] == '\n' || buffer[0] == '\r' || buffer[0] == '\0') {
+            continue;
+        }
+        for (int k = 0; buffer[k] != '\0'; k++) { //'#' zmenim na medzeru, potom staci obycajny sscanf
+            if (buffer[k] == '#') buffer[k] = ' ';
+        }
+        char c_let_temp[10], c_sedadlo_temp[5];
+        int pocet_kusov = 0;
+        sscanf(buffer, "%9s %4s %d", c_let_temp, c_sedadlo_temp, &pocet_kusov);
+
+        (*c_let)[i] = malloc(strlen(c_let_temp) + 1);
+        (*c_sedadlo)[i] = malloc(strlen(c_sedadlo_temp) + 1);
+        (*c_vahy)[i] = malloc((pocet_kusov + 1) * sizeof(float)); //pre kazdy zaznam pole vah
+        if ((*c_let)[i] == NULL || (*c_sedadlo)[i] == NULL || (*c_vahy)[i] == NULL) break;
+        strcpy((*c_let)[i], c_let_temp);
+        strcpy((*c_sedadlo)[i], c_sedadlo_temp);
+        (*c_batozina)[i] = pocet_kusov;
+
+        //vahy su za 3. medzerou (predtym za 3. '#'): za kazdou medzerou od tretej precitam jedno cislo
+        int medzery = 0;
+        int index_vahy = 0;
+        for (int k = 0; buffer[k] != '\0' && index_vahy < pocet_kusov; k++) {
+            if (buffer[k] == ' ') {
+                medzery++;
+                if (medzery >= 3) {
+                    sscanf(&buffer[k+1], "%f", &(*c_vahy)[i][index_vahy]);
+                    index_vahy++;
+                }
+            }
+        }
+        i++;
+        *c_pocet = i;
     }
     *polia = 1; //Pri tejto voľbe program negeneruje žiaden výstup.
 }
 
-void q(char ***z_pole, int *z_pocet, int polia) {
+void q(char ***let, char ***meno, char ***priezvisko, char ***datum, char ***sedadlo, int **batozina,
+       int *z_pocet, int polia) {
     int y;
+    char novy_let[10], nove_meno[16], nove_priezvisko[26], novy_datum[10], nove_sedadlo[5];
+    int nova_batozina;
+    /* udaje precitam este pred kontrolou - inak by "IB1234", "Jana"... zostali vo vstupe
+       a main by ich bral ako dalsie prikazy (I, J, ...) */
     scanf("%d", &y);
-    char let[10], meno[16], priezvisko[26], datum[10], sedadlo[5];
-    int batozina;
-    //Dáta sa budú načítavať z klávesnice vo formáte súboru zoznamCK.txt (bez '#')
-    scanf("%9s %15s %25s %9s %4s %d", let, meno, priezvisko, datum, sedadlo, &batozina);
-    if (polia == 0) { //data precitam aj tak, aby nezostali v scanf a neboli brane ako prikazy
+    scanf("%9s %15s %25s %9s %4s %d", novy_let, nove_meno, nove_priezvisko, novy_datum, nove_sedadlo,
+        &nova_batozina);
+    if (polia == 0) {
         printf("Q: Polia nie su vytvorene.\n");
         return;
     }
@@ -325,144 +350,204 @@ void q(char ***z_pole, int *z_pocet, int polia) {
     if (pozicia > *z_pocet) pozicia = *z_pocet;
     if (pozicia < 0) pozicia = 0;
 
-    char **temp = realloc(*z_pole, (*z_pocet + 1) * sizeof(char *)); //ako v 4_3: realloc cez temp
-    if (temp == NULL) return; //stare pole zostalo cele
-    *z_pole = temp;
-    for (int i = *z_pocet; i > pozicia; i--) { //posuniem vsetko od pozicie o 1 doprava
-        (*z_pole)[i] = (*z_pole)[i-1];
+    //kazde pole zvacsim o 1 (realloc cez temp ako v 4_3)
+    char **temp;
+    temp = realloc(*let, (*z_pocet + 1) * sizeof(char *));
+    if (temp == NULL) return;
+    *let = temp;
+    temp = realloc(*meno, (*z_pocet + 1) * sizeof(char *));
+    if (temp == NULL) return;
+    *meno = temp;
+    temp = realloc(*priezvisko, (*z_pocet + 1) * sizeof(char *));
+    if (temp == NULL) return;
+    *priezvisko = temp;
+    temp = realloc(*datum, (*z_pocet + 1) * sizeof(char *));
+    if (temp == NULL) return;
+    *datum = temp;
+    temp = realloc(*sedadlo, (*z_pocet + 1) * sizeof(char *));
+    if (temp == NULL) return;
+    *sedadlo = temp;
+    int *temp_int = realloc(*batozina, (*z_pocet + 1) * sizeof(int));
+    if (temp_int == NULL) return;
+    *batozina = temp_int;
+
+    //vsetko od pozicie posuniem o 1 doprava (od konca, aby som si nic neprepisal)
+    for (int i = *z_pocet; i > pozicia; i--) {
+        (*let)[i] = (*let)[i-1];
+        (*meno)[i] = (*meno)[i-1];
+        (*priezvisko)[i] = (*priezvisko)[i-1];
+        (*datum)[i] = (*datum)[i-1];
+        (*sedadlo)[i] = (*sedadlo)[i-1];
+        (*batozina)[i] = (*batozina)[i-1];
     }
-    char zaznam[100];
-    sprintf(zaznam, "%s#%s#%s#%s#%s#%d", let, meno, priezvisko, datum, sedadlo, batozina);
-    (*z_pole)[pozicia] = malloc(strlen(zaznam) + 1);
-    if ((*z_pole)[pozicia] == NULL) { //nepodarilo sa - vratim posunute zaznamy naspat
-        for (int i = pozicia; i < *z_pocet; i++) {
-            (*z_pole)[i] = (*z_pole)[i+1];
-        }
-        return;
-    }
-    strcpy((*z_pole)[pozicia], zaznam);
+
+    //na uvolnene miesto dam novy zaznam
+    (*let)[pozicia] = malloc(strlen(novy_let) + 1);
+    (*meno)[pozicia] = malloc(strlen(nove_meno) + 1);
+    (*priezvisko)[pozicia] = malloc(strlen(nove_priezvisko) + 1);
+    (*datum)[pozicia] = malloc(strlen(novy_datum) + 1);
+    (*sedadlo)[pozicia] = malloc(strlen(nove_sedadlo) + 1);
+    strcpy((*let)[pozicia], novy_let);
+    strcpy((*meno)[pozicia], nove_meno);
+    strcpy((*priezvisko)[pozicia], nove_priezvisko);
+    strcpy((*datum)[pozicia], novy_datum);
+    strcpy((*sedadlo)[pozicia], nove_sedadlo);
+    (*batozina)[pozicia] = nova_batozina;
     (*z_pocet)++;
 }
 
-void w(char ***z_pole, int *z_pocet, int polia) {
-    char let[10];
-    scanf("%9s", let);
+void w(char ***let, char ***meno, char ***priezvisko, char ***datum, char ***sedadlo, int **batozina,
+       int *z_pocet, int polia) {
+    char hladany_let[10];
+    scanf("%9s", hladany_let);
     if (polia == 0) {
         printf("W: Polia nie su vytvorene.\n");
         return;
     }
     int vymazane = 0;
-    int novy_pocet = 0;
+    int novy_pocet = 0; //kam dam dalsi zaznam, ktory nechavam
     for (int i = 0; i < *z_pocet; i++) {
-        char z_let[10];
-        sscanf((*z_pole)[i], "%9[^#]", z_let);
-        if (strcmp(z_let, let) == 0) { //tento let mazem
-            free((*z_pole)[i]);
+        if (strcmp((*let)[i], hladany_let) == 0) { //tento zaznam mazem
+            free((*let)[i]);
+            free((*meno)[i]);
+            free((*priezvisko)[i]);
+            free((*datum)[i]);
+            free((*sedadlo)[i]);
             vymazane++;
         }
         else { //tento nechavam, posuniem ho dopredu na miesto vymazanych
-            (*z_pole)[novy_pocet] = (*z_pole)[i];
+            (*let)[novy_pocet] = (*let)[i];
+            (*meno)[novy_pocet] = (*meno)[i];
+            (*priezvisko)[novy_pocet] = (*priezvisko)[i];
+            (*datum)[novy_pocet] = (*datum)[i];
+            (*sedadlo)[novy_pocet] = (*sedadlo)[i];
+            (*batozina)[novy_pocet] = (*batozina)[i];
             novy_pocet++;
         }
     }
     *z_pocet = novy_pocet;
+
     //Dynamické polia udržujte tak, aby nezaberali miesto v pamäti pre nepotrebné záznamy.
-    if (novy_pocet == 0) {
-        free(*z_pole);
-        *z_pole = NULL;
-    }
-    else {
-        char **temp = realloc(*z_pole, novy_pocet * sizeof(char *));
-        if (temp != NULL) *z_pole = temp;
-    }
+    //(+1 aby realloc nikdy nedostal 0 - pri 0 zaznamoch zostane 1 prazdne miesto)
+    char **temp;
+    temp = realloc(*let, (novy_pocet + 1) * sizeof(char *));
+    if (temp != NULL) *let = temp;
+    temp = realloc(*meno, (novy_pocet + 1) * sizeof(char *));
+    if (temp != NULL) *meno = temp;
+    temp = realloc(*priezvisko, (novy_pocet + 1) * sizeof(char *));
+    if (temp != NULL) *priezvisko = temp;
+    temp = realloc(*datum, (novy_pocet + 1) * sizeof(char *));
+    if (temp != NULL) *datum = temp;
+    temp = realloc(*sedadlo, (novy_pocet + 1) * sizeof(char *));
+    if (temp != NULL) *sedadlo = temp;
+    int *temp_int = realloc(*batozina, (novy_pocet + 1) * sizeof(int));
+    if (temp_int != NULL) *batozina = temp_int;
+
     printf("W: Vymazalo sa : %d zaznamov !\n", vymazane);
 }
 
-char **e(char **c_pole, int c_pocet, int polia) {
-    char sedadlo[5];
-    scanf("%4s", sedadlo);
+float **e(char **c_let, char **c_sedadlo, int *c_batozina, float **c_vahy, int c_pocet, int polia) {
+    char hladane_sedadlo[5];
+    scanf("%4s", hladane_sedadlo);
     if (polia == 0) {
         printf("E: Polia nie su vytvorene.\n");
-        return c_pole;
+        return c_vahy;
     }
     //zistí koľko batožiny sa odovzdalo pre dané sedadlo (moze byt viac zaznamov, napr. A15 je 2x)
     int spolu = 0;
     for (int i = 0; i < c_pocet; i++) {
-        char c_let[10], c_sedadlo[5];
-        int c_batozina;
-        sscanf(c_pole[i], "%9[^#]#%4[^#]#%d", c_let, c_sedadlo, &c_batozina);
-        if (strcmp(c_sedadlo, sedadlo) == 0) spolu += c_batozina;
+        if (strcmp(c_sedadlo[i], hladane_sedadlo) == 0) spolu += c_batozina[i];
     }
     //pre každú batožinu bude možné zadať novú váhu z klávesnice
-    float *vahy = malloc((spolu + 1) * sizeof(float)); //+1 aby malloc(0) nikdy nebol
-    if (vahy == NULL) return c_pole;
+    float *nove_vahy = malloc((spolu + 1) * sizeof(float));
+    if (nove_vahy == NULL) return c_vahy;
     printf("Zadaj %d váhy: ", spolu); //presne ako v ukazke (s diakritikou)
     for (int i = 0; i < spolu; i++) {
-        scanf("%f", &vahy[i]);
+        scanf("%f", &nove_vahy[i]);
     }
+
     //Program najprv vypíše pôvodný obsah poľa v tvare v akom je uložený v txt súbore...
-    //(bez prazdneho riadku navyse - Enter po vahach uz novy riadok spravil, v ukazke tam nic nie je)
     for (int i = 0; i < c_pocet; i++) {
-        printf("%s\n", c_pole[i]);
+        printf("%s#%s#%d", c_let[i], c_sedadlo[i], c_batozina[i]);
+        for (int k = 0; k < c_batozina[i]; k++) {
+            printf("#%.2f", c_vahy[i][k]);
+        }
+        printf("\n");
     }
-    //...zmenim zaznamy s tymto sedadlom: poskladam retazec znova s novymi vahami
+
+    //zmenim vahy pri zaznamoch s tymto sedadlom
     int index_vahy = 0;
     for (int i = 0; i < c_pocet; i++) {
-        char c_let[10], c_sedadlo[5];
-        int c_batozina;
-        sscanf(c_pole[i], "%9[^#]#%4[^#]#%d", c_let, c_sedadlo, &c_batozina);
-        if (strcmp(c_sedadlo, sedadlo) == 0) {
-            char novy[256];
-            int dlzka = sprintf(novy, "%s#%s#%d", c_let, c_sedadlo, c_batozina);
-            for (int k = 0; k < c_batozina; k++) {
-                dlzka += sprintf(novy + dlzka, "#%.2f", vahy[index_vahy]); //pridam na koniec retazca
+        if (strcmp(c_sedadlo[i], hladane_sedadlo) == 0) {
+            for (int k = 0; k < c_batozina[i]; k++) {
+                c_vahy[i][k] = nove_vahy[index_vahy];
                 index_vahy++;
-            }
-            char *nova_kopia = malloc(strlen(novy) + 1);
-            if (nova_kopia != NULL) strcpy(nova_kopia, novy);
-            if (nova_kopia != NULL) {
-                free(c_pole[i]); //stary retazec uz netreba
-                c_pole[i] = nova_kopia;
             }
         }
     }
-    free(vahy);
+    free(nove_vahy);
+
     //...a potom zmenený obsah poľa.
     printf("\n");
     for (int i = 0; i < c_pocet; i++) {
-        printf("%s\n", c_pole[i]);
+        printf("%s#%s#%d", c_let[i], c_sedadlo[i], c_batozina[i]);
+        for (int k = 0; k < c_batozina[i]; k++) {
+            printf("#%.2f", c_vahy[i][k]);
+        }
+        printf("\n");
     }
-    return c_pole; //Funkcia vracia zmenený obsah poľa naspäť do funkcie main.
+    return c_vahy; //Funkcia vracia zmenený obsah poľa naspäť do funkcie main.
 }
 
 int main() {
     char program;
+    int which_v;
     FILE *zoznam = NULL, *checking = NULL;
-    char **z_pole = NULL, **c_pole = NULL; //dynamicke polia: zoznamCK.txt a checkin1.txt
-    int z_pocet = 0, c_pocet = 0;
+    //dynamicke polia pre zoznamCK.txt
+    char **let = NULL, **meno = NULL, **priezvisko = NULL, **datum = NULL, **sedadlo = NULL;
+    int *batozina = NULL;
+    int z_pocet = 0;
+    //dynamicke polia pre checkin1.txt
+    char **c_let = NULL, **c_sedadlo = NULL;
+    int *c_batozina = NULL;
+    float **c_vahy = NULL;
+    int c_pocet = 0;
     int polia = 0; //0 = prikaz n este nebol, 1 = polia su vytvorene
+
     printf("Oberte fuknciu \n \nVstup v 1: informacia o letu.\nVstup v 2: vypis z dynamickych poli.\n"
            "Vstup h: histogram.\nVstup n: vytvorenie dynamickych poli.\nVstup q Y: pridanie zaznamu.\n"
            "Vstup w LET: vymazanie letu.\nVstup e SEDADLO: zmena vah batoziny.\nk - koniec\n");
     while (1) {
-        if (scanf(" %c", &program) != 1) break; //koniec vstupu (EOF) - aby sa cyklus nezacyklil
+        if (scanf(" %c", &program) != 1) break; //ked vstup skonci (EOF), inak by sa cyklus nikdy nezastavil
         if (program == 'v') {
-            v(&zoznam, &checking, z_pole, z_pocet, c_pole, c_pocet, polia);
+            scanf("%d", &which_v);
+            if (which_v == 1) {
+                v1(&zoznam, &checking);
+            }
+            else if (which_v == 2) {
+                v2(let, meno, priezvisko, datum, sedadlo, batozina, z_pocet,
+                   c_let, c_sedadlo, c_batozina, c_vahy, c_pocet, polia);
+            }
+            else {
+                printf("V: Nespravna volba vypisu.\n"); /*iné - program vypíše správu „V: Nespravna volba vypisu.“
+                Správa je nasledovaná znakom konca riadku a program pokračuje v načítavaní ďalších príkazov.  */
+            }
         }
         else if (program == 'h') {
             h(&zoznam);
         }
         else if (program == 'n') {
-            n(&zoznam, &checking, &z_pole, &z_pocet, &c_pole, &c_pocet, &polia);
+            n(&zoznam, &checking, &let, &meno, &priezvisko, &datum, &sedadlo, &batozina, &z_pocet,
+              &c_let, &c_sedadlo, &c_batozina, &c_vahy, &c_pocet, &polia);
         }
         else if (program == 'q') { //q je teraz pridanie zaznamu, koniec je preto k
-            q(&z_pole, &z_pocet, polia);
+            q(&let, &meno, &priezvisko, &datum, &sedadlo, &batozina, &z_pocet, polia);
         }
         else if (program == 'w') {
-            w(&z_pole, &z_pocet, polia);
+            w(&let, &meno, &priezvisko, &datum, &sedadlo, &batozina, &z_pocet, polia);
         }
         else if (program == 'e') {
-            c_pole = e(c_pole, c_pocet, polia);
+            c_vahy = e(c_let, c_sedadlo, c_batozina, c_vahy, c_pocet, polia);
         }
         else if (program == 'k') {
             break;
@@ -471,17 +556,31 @@ int main() {
             printf("Neexistujúci program. Oberte : v, h, n, q, w, e, k\n");
         }
     }
-    if (z_pole != NULL) { //pred koncom uvolnim vsetku dynamicku pamat (ako v n)
+
+    //pred koncom uvolnim vsetku dynamicku pamat (ako v n)
+    if (polia == 1) {
         for (int i = 0; i < z_pocet; i++) {
-            free(z_pole[i]);
+            free(let[i]);
+            free(meno[i]);
+            free(priezvisko[i]);
+            free(datum[i]);
+            free(sedadlo[i]);
         }
-        free(z_pole);
-    }
-    if (c_pole != NULL) {
+        free(let);
+        free(meno);
+        free(priezvisko);
+        free(datum);
+        free(sedadlo);
+        free(batozina);
         for (int i = 0; i < c_pocet; i++) {
-            free(c_pole[i]);
+            free(c_let[i]);
+            free(c_sedadlo[i]);
+            free(c_vahy[i]);
         }
-        free(c_pole);
+        free(c_let);
+        free(c_sedadlo);
+        free(c_batozina);
+        free(c_vahy);
     }
     if (zoznam != NULL) {
         fclose(zoznam);
