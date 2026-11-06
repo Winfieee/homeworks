@@ -91,8 +91,9 @@ void v(FILE **zoznam, FILE **checkin,
             }
             else {
                 printf("Status: true\n");
-                printf("Pocet batoziny: %d / %d ", batozina[i], c_batozina[najdeny]);
+                printf("Pocet batoziny: %d / %d", batozina[i], c_batozina[najdeny]);
                 for (int k = 0; k < c_batozina[najdeny]; k++) {
+                    if (k == 0) printf(" "); //medzera iba ked su nejake vahy (pri 0 kusoch nie)
                     if (k > 0) printf(","); //pri viacerých batožinách budú zátvorky oddelené čiarkou
                     printf("[%.2f]", c_vahy[najdeny][k]);
                 }
@@ -237,13 +238,15 @@ void n(FILE **zoznam, FILE **checkin,
     char buffer[256];
     int pocet_z = 0, pocet_c = 0;
     //1. prechod: spočíta počet záznamov v jednotlivých txt súboroch
+    /*riadok so zaznamom hladam cez strchr (najde znak '#' v retazci) a nie buffer[0] == '#',
+      lebo subor ulozeny v Notepade moze mat na zaciatku 3 neviditelne bajty (BOM) pred prvym '#' */
     rewind(*zoznam);
     while (fgets(buffer, sizeof(buffer), *zoznam) != NULL) {
-        if (buffer[0] == '#') pocet_z++; //kazdy zaznam zacina '#'
+        if (strchr(buffer, '#') != NULL) pocet_z++; //kazdy zaznam zacina riadkom s '#'
     }
     rewind(*checkin);
     while (fgets(buffer, sizeof(buffer), *checkin) != NULL) {
-        if (buffer[0] != '\n' && buffer[0] != '\r' && buffer[0] != '\0') pocet_c++; //1 riadok = 1 zaznam
+        if (strchr(buffer, '#') != NULL) pocet_c++; //kazdy zaznam checkinu obsahuje '#', prazdny riadok nie
     }
 
     //dynamicky vytvorí polia pre jednotlivé položky podľa počtu záznamov (malloc)
@@ -264,37 +267,33 @@ void n(FILE **zoznam, FILE **checkin,
     int i = -1; //index zaznamu, pri prvom '#' bude 0
     rewind(*zoznam);
     while (fgets(buffer, sizeof(buffer), *zoznam) != NULL) {
-        if (buffer[0] == '\n' || buffer[0] == '\r' || buffer[0] == '\0') {
-            continue; //prazdny riadok preskocim
-        }
-        if (buffer[0] == '#') { //novy zaznam
+        if (strchr(buffer, '#') != NULL) { //novy zaznam
             i++;
             riadok = 0;
             continue;
         }
+        if (sscanf(buffer, "%s", slovo) != 1) {
+            continue; //prazdny riadok (alebo iba medzery) preskocim - sscanf nenasiel ziadne slovo
+        }
+        if (i < 0) continue; //nieco pred prvym '#' - to nie je zaznam
         riadok++; //1 = let, 2 = meno, 3 = priezvisko, 4 = datum, 5 = sedadlo, 6 = batozina
         if (riadok == 1) {
-            sscanf(buffer, "%s", slovo);
             (*let)[i] = malloc(strlen(slovo) + 1); //+1 pre '\0'
             strcpy((*let)[i], slovo);
         }
         if (riadok == 2) {
-            sscanf(buffer, "%s", slovo);
             (*meno)[i] = malloc(strlen(slovo) + 1);
             strcpy((*meno)[i], slovo);
         }
         if (riadok == 3) {
-            sscanf(buffer, "%s", slovo);
             (*priezvisko)[i] = malloc(strlen(slovo) + 1);
             strcpy((*priezvisko)[i], slovo);
         }
         if (riadok == 4) {
-            sscanf(buffer, "%s", slovo);
             (*datum)[i] = malloc(strlen(slovo) + 1);
             strcpy((*datum)[i], slovo);
         }
         if (riadok == 5) {
-            sscanf(buffer, "%s", slovo);
             (*sedadlo)[i] = malloc(strlen(slovo) + 1);
             strcpy((*sedadlo)[i], slovo);
         }
@@ -308,15 +307,19 @@ void n(FILE **zoznam, FILE **checkin,
     i = 0;
     rewind(*checkin);
     while (fgets(buffer, sizeof(buffer), *checkin) != NULL) {
-        if (buffer[0] == '\n' || buffer[0] == '\r' || buffer[0] == '\0') {
-            continue;
+        if (strchr(buffer, '#') == NULL) {
+            continue; //prazdny riadok (aj iba z medzier) - nie je to zaznam, rovnako ako pri pocitani
         }
         for (int k = 0; buffer[k] != '\0'; k++) { //'#' zmenim na medzeru, potom staci obycajny sscanf
             if (buffer[k] == '#') buffer[k] = ' ';
         }
-        char c_let_temp[10], c_sedadlo_temp[5];
-        int pocet_kusov;
-        sscanf(buffer, "%s %s %d", c_let_temp, c_sedadlo_temp, &pocet_kusov);
+        int zac = 0; //let zacina velkym pismenom - preskocim vsetko pred nim (napr. BOM na zaciatku suboru)
+        while (buffer[zac] != '\0' && !(buffer[zac] >= 'A' && buffer[zac] <= 'Z')) {
+            zac++;
+        }
+        char c_let_temp[10] = "", c_sedadlo_temp[5] = "";
+        int pocet_kusov = 0;
+        sscanf(&buffer[zac], "%s %s %d", c_let_temp, c_sedadlo_temp, &pocet_kusov);
 
         (*c_let)[i] = malloc(strlen(c_let_temp) + 1);
         strcpy((*c_let)[i], c_let_temp);
@@ -324,11 +327,14 @@ void n(FILE **zoznam, FILE **checkin,
         strcpy((*c_sedadlo)[i], c_sedadlo_temp);
         (*c_batozina)[i] = pocet_kusov;
         (*c_vahy)[i] = malloc(pocet_kusov * sizeof(float)); //kazdy zaznam ma svoje pole vah
+        for (int k = 0; k < pocet_kusov; k++) {
+            (*c_vahy)[i][k] = 0; //keby v riadku bolo menej vah ako kusov, nezostane tam smetie
+        }
 
         //vahy su za 3. medzerou (predtym za 3. '#'): za kazdou medzerou od tretej precitam jedno cislo
         int medzery = 0;
         int index_vahy = 0;
-        for (int k = 0; buffer[k] != '\0' && index_vahy < pocet_kusov; k++) {
+        for (int k = zac; buffer[k] != '\0' && index_vahy < pocet_kusov; k++) {
             if (buffer[k] == ' ') {
                 medzery++;
                 if (medzery >= 3) {
@@ -463,7 +469,9 @@ float **e(char **c_let, char **c_sedadlo, int *c_batozina, float **c_vahy, int c
     }
     //pre každú batožinu bude možné zadať novú váhu z klávesnice
     float *nove_vahy = malloc(spolu * sizeof(float));
-    printf("Zadaj %d váhy: ", spolu); //presne ako v ukazke (s diakritikou)
+    if (spolu > 0) { //ked take sedadlo nie je, nie je co zadavat
+        printf("Zadaj %d váhy: ", spolu); //presne ako v ukazke (s diakritikou)
+    }
     for (int i = 0; i < spolu; i++) {
         scanf("%f", &nove_vahy[i]);
     }
@@ -519,7 +527,7 @@ int main() {
            "Vstup h: histogram.\nVstup n: vytvorenie dynamickych poli.\nVstup q Y: pridanie zaznamu.\n"
            "Vstup w LET: vymazanie letu.\nVstup e SEDADLO: zmena vah batoziny.\nk - koniec\n");
     while (1) {
-        scanf(" %c", &program);
+        if (scanf(" %c", &program) != 1) break; //vstup skoncil bez k - inak by sa posledny prikaz opakoval donekonecna
         if (program == 'v') {
             v(&zoznam, &checking, let, meno, priezvisko, datum, sedadlo, batozina, z_pocet,
               c_let, c_sedadlo, c_batozina, c_vahy, c_pocet, polia);
