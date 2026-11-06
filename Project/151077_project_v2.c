@@ -1,38 +1,12 @@
 #include<stdio.h>
 #include<stdlib.h>
-#include<string.h> //strlen, strcpy, strcmp - pre retazce v dynamickych poliach
+#include<string.h> //strlen, strcpy, strcmp, strcspn - pre retazce v dynamickych poliach
 
 /* V2: ako v1, ale pribudli dynamicke polia (n, v 2, q, w, e).
    Struktury sa nesmu pouzit, preto kazdy zaznam ulozim ako JEDEN retazec, polozky oddelim znakom '#'.
    z_pole (zoznamCK.txt):  "IB1234#Jozko#Mrkvicka#20101980#A35#2"
    c_pole (checkin1.txt):  "IB1234#A35#2#25.20#18.15"  (tak ako je v subore)
    Takze pre kazdy subor mam jedno pole retazcov (char **) a pocet zaznamov (int). */
-
-void uvolni(char ***pole, int *pocet) { //uvolnim kazdy retazec a potom samotne pole
-    if (*pole != NULL) {
-        for (int i = 0; i < *pocet; i++) {
-            free((*pole)[i]);
-        }
-        free(*pole);
-    }
-    *pole = NULL;
-    *pocet = 0;
-}
-
-void odstran_enter(char *buffer) { //fgets necha na konci '\n' (alebo "\r\n"), ten nechcem v poli
-    int dlzka = strlen(buffer);
-    while (dlzka > 0 && (buffer[dlzka-1] == '\n' || buffer[dlzka-1] == '\r')) {
-        buffer[dlzka-1] = '\0';
-        dlzka--;
-    }
-}
-
-char *kopia(char *retazec) { //malloc presne tolko bajtov kolko treba (+1 pre '\0')
-    char *novy = malloc(strlen(retazec) + 1);
-    if (novy == NULL) return NULL;
-    strcpy(novy, retazec);
-    return novy;
-}
 
 /* v2 je napisana az za h (poradie v kode: v1, h, v 2, n, q, w, e), ale v() ju vola uz tu,
    preto ju tu iba ohlasim (prototyp) - kompilator potom vie, ze taka funkcia existuje */
@@ -59,7 +33,8 @@ void v(FILE **zoznam, FILE **checkin, char **z_pole, int z_pocet, char **c_pole,
         }
         rewind(*zoznam);
         while (fgets(buffer, sizeof(buffer), *zoznam) != NULL) {
-            odstran_enter(buffer);
+            buffer[strcspn(buffer, "\r\n")] = '\0'; /*fgets necha na konci '\n' (z Windowsu aj "\r\n"),
+                strcspn vrati poziciu prveho '\r' alebo '\n' a tam retazec ukoncim*/
             if (buffer[0] == '\0') continue; //"(môže byť aj prázdny riadok)" - prazdne riadky preskocim
             if (buffer[0] == '#') { /*novy format: kazdy zaznam zacina '#', takze tu zacinam pocitat od 0
                                      (v1 resetovalo az na prazdnom riadku, ten tam ale byt nemusi)*/
@@ -254,8 +229,22 @@ void n(FILE **zoznam, FILE **checkin, char ***z_pole, int *z_pocet, char ***c_po
         return;
     }
     //Ak už boli polia predtým vytvorené, sú najprv korektne dealokované a potom sa vytvoria nové.
-    uvolni(z_pole, z_pocet);
-    uvolni(c_pole, c_pocet);
+    if (*z_pole != NULL) { //najprv kazdy retazec, potom samotne pole
+        for (int i = 0; i < *z_pocet; i++) {
+            free((*z_pole)[i]);
+        }
+        free(*z_pole);
+    }
+    if (*c_pole != NULL) {
+        for (int i = 0; i < *c_pocet; i++) {
+            free((*c_pole)[i]);
+        }
+        free(*c_pole);
+    }
+    *z_pole = NULL;
+    *c_pole = NULL;
+    *z_pocet = 0;
+    *c_pocet = 0;
 
     char buffer[256];
     int pocet_z = 0, pocet_c = 0;
@@ -266,7 +255,7 @@ void n(FILE **zoznam, FILE **checkin, char ***z_pole, int *z_pocet, char ***c_po
     }
     rewind(*checkin);
     while (fgets(buffer, sizeof(buffer), *checkin) != NULL) {
-        odstran_enter(buffer);
+        buffer[strcspn(buffer, "\r\n")] = '\0'; //odstranim '\n' na konci (ako vo v())
         if (buffer[0] != '\0') pocet_c++; //jeden neprazdny riadok = jeden zaznam
     }
 
@@ -286,7 +275,7 @@ void n(FILE **zoznam, FILE **checkin, char ***z_pole, int *z_pocet, char ***c_po
     int riadok = 0;
     rewind(*zoznam);
     while (fgets(buffer, sizeof(buffer), *zoznam) != NULL && *z_pocet < pocet_z) {
-        odstran_enter(buffer);
+        buffer[strcspn(buffer, "\r\n")] = '\0';
         if (buffer[0] == '\0') continue;
         if (buffer[0] == '#') {
             riadok = 0;
@@ -302,15 +291,19 @@ void n(FILE **zoznam, FILE **checkin, char ***z_pole, int *z_pocet, char ***c_po
             sscanf(buffer, "%2s", batozina);
             char zaznam[100];
             sprintf(zaznam, "%s#%s#%s#%s#%s#%s", let, meno, priezvisko, datum, sedadlo, batozina);
-            (*z_pole)[*z_pocet] = kopia(zaznam);
+            (*z_pole)[*z_pocet] = malloc(strlen(zaznam) + 1); //presne tolko bajtov kolko treba (+1 pre '\0')
+            if ((*z_pole)[*z_pocet] == NULL) break;
+            strcpy((*z_pole)[*z_pocet], zaznam);
             (*z_pocet)++;
         }
     }
     rewind(*checkin);
     while (fgets(buffer, sizeof(buffer), *checkin) != NULL && *c_pocet < pocet_c) {
-        odstran_enter(buffer);
+        buffer[strcspn(buffer, "\r\n")] = '\0';
         if (buffer[0] == '\0') continue;
-        (*c_pole)[*c_pocet] = kopia(buffer); //riadok checkinu ulozim presne tak ako je
+        (*c_pole)[*c_pocet] = malloc(strlen(buffer) + 1); //riadok checkinu ulozim presne tak ako je
+        if ((*c_pole)[*c_pocet] == NULL) break;
+        strcpy((*c_pole)[*c_pocet], buffer);
         (*c_pocet)++;
     }
     *polia = 1; //Pri tejto voľbe program negeneruje žiaden výstup.
@@ -340,7 +333,14 @@ void q(char ***z_pole, int *z_pocet, int polia) {
     }
     char zaznam[100];
     sprintf(zaznam, "%s#%s#%s#%s#%s#%d", let, meno, priezvisko, datum, sedadlo, batozina);
-    (*z_pole)[pozicia] = kopia(zaznam);
+    (*z_pole)[pozicia] = malloc(strlen(zaznam) + 1);
+    if ((*z_pole)[pozicia] == NULL) { //nepodarilo sa - vratim posunute zaznamy naspat
+        for (int i = pozicia; i < *z_pocet; i++) {
+            (*z_pole)[i] = (*z_pole)[i+1];
+        }
+        return;
+    }
+    strcpy((*z_pole)[pozicia], zaznam);
     (*z_pocet)++;
 }
 
@@ -418,7 +418,8 @@ char **e(char **c_pole, int c_pocet, int polia) {
                 dlzka += sprintf(novy + dlzka, "#%.2f", vahy[index_vahy]); //pridam na koniec retazca
                 index_vahy++;
             }
-            char *nova_kopia = kopia(novy);
+            char *nova_kopia = malloc(strlen(novy) + 1);
+            if (nova_kopia != NULL) strcpy(nova_kopia, novy);
             if (nova_kopia != NULL) {
                 free(c_pole[i]); //stary retazec uz netreba
                 c_pole[i] = nova_kopia;
@@ -470,8 +471,18 @@ int main() {
             printf("Neexistujúci program. Oberte : v, h, n, q, w, e, k\n");
         }
     }
-    uvolni(&z_pole, &z_pocet); //pred koncom uvolnim vsetku dynamicku pamat
-    uvolni(&c_pole, &c_pocet);
+    if (z_pole != NULL) { //pred koncom uvolnim vsetku dynamicku pamat (ako v n)
+        for (int i = 0; i < z_pocet; i++) {
+            free(z_pole[i]);
+        }
+        free(z_pole);
+    }
+    if (c_pole != NULL) {
+        for (int i = 0; i < c_pocet; i++) {
+            free(c_pole[i]);
+        }
+        free(c_pole);
+    }
     if (zoznam != NULL) {
         fclose(zoznam);
     }
