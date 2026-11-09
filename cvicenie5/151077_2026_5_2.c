@@ -9,4 +9,5 @@ int main() {
     printf("Nacitajte 2 celych cisla\n");
     scanf("%d %d",&a,&b);
     printf("Maxiumum: %d\n", maximum(&a, &b));
+    return 0;
 }
