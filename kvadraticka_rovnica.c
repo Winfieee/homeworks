@@ -12,10 +12,10 @@ int kvadraticka_rovnica(int *a, int *b, int *c, float *prvy, float *druhy) {
     }
     Dsqr = sqrt(D);
     *prvy = (-B + Dsqr) / (2.0f*A);
-    *druhy = (-B - Dsqr) / (2.0f*A);
     if (D == 0) {
         return 1;
     }
+    *druhy = (-B - Dsqr) / (2.0f*A);
     return 2;
 }
 
