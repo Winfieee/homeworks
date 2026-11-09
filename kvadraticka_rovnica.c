@@ -2,28 +2,30 @@
 #include<math.h>
 
 int kvadraticka_rovnica(int *a, int *b, int *c, float *prvy, float *druhy) {
+    int pocet = 0;
     int A = *a;
     int B = *b;
     int C = *c;
-    float D = (float)B*B - 4.0f*A*C;
-    float Dsqr = 0;
-    if (D < 0) {
+    float Dsqr = sqrt(B*B - 4*A*C);
+    if (isnan(Dsqr)) {
         return 0;
     }
-    Dsqr = sqrt(D);
-    *prvy = (-B + Dsqr) / (2.0f*A);
-    if (D == 0) {
-        return 1;
+    if (Dsqr == 0) {
+        *prvy = -B / (2.0f*A);
+        pocet = 1;
     }
-    *druhy = (-B - Dsqr) / (2.0f*A);
-    return 2;
+    if (Dsqr > 0) {
+        *prvy = (-1*B + Dsqr) / (2.0f*A);
+        *druhy = (-1*B - Dsqr) / (2.0f*A);
+        pocet = 2;
+    }
+    return pocet;
 }
 
 int main () {
     int a, b, c;
     int pocet;
-    float prvy = 0;
-    float druhy = 0;
+    float prvy = 0, druhy = 0;
     scanf("%d %d %d",&a,&b,&c);
     while (a == 0) {
         printf("Zadajte iny koeficient a\n");
