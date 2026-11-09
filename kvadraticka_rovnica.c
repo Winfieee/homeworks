@@ -10,14 +10,16 @@ int kvadraticka_rovnica(int *a, int *b, int *c, float *prvy, float *druhy) {
     int C = *c;
     D = (float)B*B - 4.0f*A*C;
     if (D < 0) {
-        return pocet;
+        pocet = 0;
     }
-    Dsqr = sqrt(D);
-    *prvy = (-B + Dsqr) / (2.0f*A);
-    *druhy = (-B - Dsqr) / (2.0f*A);
     if (D == 0) {
+        *prvy = -B / (2.0f*A);
         pocet = 1;
-    } else {
+    }
+    if (D > 0) {
+        Dsqr = sqrt(D);
+        *prvy = (-B + Dsqr) / (2.0f*A);
+        *druhy = (-B - Dsqr) / (2.0f*A);
         pocet = 2;
     }
     return pocet;
@@ -33,14 +35,12 @@ int main () {
         printf("Zadajte iny koeficient a\n");
         scanf("%d",&a);
     }
-    pocet = kvadraticka_rovnica(&a, &b, &c, &prvy, &druhy);
-    if (pocet == 0) {
-        printf("Pocet korenov kvadratickej rovnice je: %d\n", pocet);
-    } else if (pocet == 1) {
-        printf("Pocet korenov kvadratickej rovnice je: %d\nKoren ma hodnotu %.5f", pocet, prvy);
-    } else {
-        printf("Pocet korenov kvadratickej rovnice je: %d\nPrvy koren ma hodnotu %.5f\nDruhy koren ma "
-            "hodnotu %.5f", pocet, prvy, druhy);
+    printf("Pocet korenov kvadratickej rovnice je: %d\n", pocet = kvadraticka_rovnica(&a, &b, &c, &prvy, &druhy));
+    if (pocet == 1) {
+        printf("Koren ma hodnotu %.5f", prvy);
+    }
+    if (pocet == 2) {
+        printf("Prvy koren ma hodnotu %.5f\nDruhy koren ma hodnotu %.5f", prvy, druhy);
     }
     return 0;
 }
