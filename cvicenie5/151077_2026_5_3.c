@@ -25,6 +25,7 @@ int kvadraticka_rovnica(int *a, int *b, int *c, float *prvy, float *druhy) {
 int main () {
     int a, b, c, pocet;
     float prvy = 0, druhy = 0;
+    printf("Nacitajte hodnoty parametrov a, b, c v rovnice f(x)=ax^2+bx+c\n");
     scanf("%d %d %d",&a,&b,&c);
     while (a == 0) {
         printf("Zadajte iny koeficient a\n");
