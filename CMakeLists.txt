@@ -12,7 +12,6 @@ foreach(SOURCE_FILE ${ALL_C_FILES})
     string(MAKE_C_IDENTIFIER "${RAW_NAME}" TARGET_NAME)
 
     if(NOT TARGET ${TARGET_NAME})
-        add_executable(${TARGET_NAME} ${SOURCE_FILE}
-                cvicenie5/151077_2026_5_5.c)
+        add_executable(${TARGET_NAME} ${SOURCE_FILE})
     endif()
 endforeach()
