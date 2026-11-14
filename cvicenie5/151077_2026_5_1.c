@@ -15,4 +15,5 @@ int main() {
     vypocitaj(a, b, &obsah, &obvod);
     printf("Obsah: %.3f\n", obsah);
     printf("Obvod: %.3f\n", obvod);
+    return 0;
 }

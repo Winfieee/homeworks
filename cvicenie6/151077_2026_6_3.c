@@ -6,7 +6,6 @@ int alokuj_2D_pole(int ***pole, int n, int m) {
     if (*pole == NULL) {
         return 1;
     }
-
     for (int i = 0; i < n; i++) {
         (*pole)[i] = (int *)malloc(m * sizeof(int));
         if ((*pole)[i] == NULL) {
@@ -17,7 +16,6 @@ int alokuj_2D_pole(int ***pole, int n, int m) {
             return 1;
         }
     }
-
     return 0;
 }
 
@@ -37,7 +35,6 @@ int main() {
     int n, m;
     printf("Nacitajte reozmery pola n, m\n");
     scanf("%d %d", &n, &m);
-
     int **pole = NULL;
     if (alokuj_2D_pole(&pole, n, m) == 1) {
         return 1;
@@ -49,13 +46,11 @@ int main() {
             scanf("%d", &pole[i][j]);
         }
     }
-
     vypis_2D_pole(pole, n, m);
 
     for (int i = 0; i < n; i++) {
         free(pole[i]);
     }
     free(pole);
-
     return 0;
 }
