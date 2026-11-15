@@ -18,5 +18,6 @@ foreach(SOURCE_FILE ${ALL_C_FILES})
     get_filename_component(TARGET_NAME ${SOURCE_FILE} NAME_WE)
     add_executable(${TARGET_NAME} ${SOURCE_FILE}
             cv7/151077_2026_7_1.c
-            cv7/151077_2026_7_1.c)
+            cv7/151077_2026_7_1.c
+            cv7/151077_2026_7_2.c)
 endforeach()
